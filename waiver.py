@@ -34,5 +34,18 @@ htmlSource = requests.get("https://raw.github.com/sqor/Waiver/master/index.html"
 parser = MyHTMLParser()
 parser.feed(htmlSource.content)
 
-import pprint
-pprint.pprint(parser.htmlData)
+#@TODO: check how parser handles <br>, <hr>
+
+for data in parser.htmlData:
+    if data.has_key('tag'):
+        print "<%s" % (data['tag']),
+
+    if data.has_key('attrs'):
+        for attr in data['attrs']:
+            print " %s=\"%s\"" % (attr[0], attr[1]),
+
+    if data.has_key('tag'):
+        print ">",
+
+    if data.has_key('endTag'):
+        print "</%s>" % (data['endTag'])
