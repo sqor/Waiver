@@ -4,27 +4,32 @@ from htmlentitydefs import name2codepoint
 
 class MyHTMLParser(HTMLParser):
     scriptTags = []
-    inGroup = False
-    scriptGroup = []
-
     htmlData = []
+    handle_script_tag = False
 
     def handle_starttag(self, tag, attrs):
+        self.handle_script_tag = False
         if tag == "script":
-            self.inGroup = True
             for attr in attrs:
                 if attr[0] == "src":
-                    self.scriptTags.append(attr[1])
-                else: 
-                    self.htmlData.append({"tag": tag, "attrs": attrs} )
+                    self.handle_script_tag = True
+
+            if self.handle_script_tag:
+                self.scriptTags.append({"tag": tag, "attrs": attrs})
+            else:
+                self.htmlData.append({"tag": tag, "attrs": attrs} )
         else:
             self.htmlData.append({"tag": tag, "attrs": attrs} )
-            self.inGroup = False
+
     def handle_endtag(self, tag):
-        if not self.inGroup:
+        if not self.handle_script_tag:
             self.htmlData.append({"endTag": tag} )
+
+        self.handle_script_tag = False
+
     def handle_data(self, data):
-        if not self.inGroup:
+        
+        if not self.handle_script_tag:
             self.htmlData.append({"data": data} )
 
 
@@ -49,3 +54,4 @@ for data in parser.htmlData:
 
     if data.has_key('endTag'):
         print "</%s>" % (data['endTag'])
+
