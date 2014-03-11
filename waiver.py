@@ -45,7 +45,10 @@ def getargs():
 def main():
     args = getargs()
 
-    html_filepath = os.path.join(args.html_dir, args.html_filename)
+    input_html_dir = args.html_dir
+    input_html_filename = args.html_filename
+    html_filepath = os.path.join(input_html_dir, input_html_filename)
+    print html_filepath
 
     # Get the html file:
     parser = MyHTMLParser()
@@ -80,8 +83,20 @@ def main():
     print ''.join(new_html_contents)
 
     #@TODO: date/timestamp
+    url_file_contents = ""
+    for url in parser.scriptUrls:
+        if url.startswith('http'):
+            r = requests.get(url)
+            url_file_contents += r.content
+        else:
+            print html_filepath
+            url_fullpath = os.path.join(input_html_dir, url)
+            with open(url_fullpath, 'r') as fh:
+                url_file_contents += fh.read()
+        url_file_contents += '\n'
+
     with open(os.path.join(args.html_dir, 'main001.js'), 'w') as fh:
-        fh.write('\n'.join(parser.scriptUrls))
+        fh.write(url_file_contents)
 
 if __name__ == '__main__':
     main()
