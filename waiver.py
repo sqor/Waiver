@@ -1,9 +1,11 @@
 import requests
+import os
 from HTMLParser import HTMLParser
 from htmlentitydefs import name2codepoint
+import argparse
 
 class MyHTMLParser(HTMLParser):
-    scriptTags = []
+    scriptUrls = []
     htmlData = []
     handle_script_tag = False
 
@@ -12,11 +14,10 @@ class MyHTMLParser(HTMLParser):
         if tag == "script":
             for attr in attrs:
                 if attr[0] == "src":
+                    self.scriptUrls.append(attr[1])
                     self.handle_script_tag = True
 
-            if self.handle_script_tag:
-                self.scriptTags.append({"tag": tag, "attrs": attrs})
-            else:
+            if not self.handle_script_tag:
                 self.htmlData.append({"tag": tag, "attrs": attrs} )
         else:
             self.htmlData.append({"tag": tag, "attrs": attrs} )
@@ -28,30 +29,59 @@ class MyHTMLParser(HTMLParser):
         self.handle_script_tag = False
 
     def handle_data(self, data):
-        
+
         if not self.handle_script_tag:
             self.htmlData.append({"data": data} )
 
+def getargs():
+    parser = argparse.ArgumentParser(description='Process some integers.')
+    parser.add_argument('--html_dir',
+                        help='directory to find the html file.')
+    parser.add_argument('--html_filename',
+                        help='html file to parse.')
 
-# Get the html file:
-htmlSource = requests.get("https://raw.github.com/sqor/Waiver/master/index.html")
+    return parser.parse_args()
 
-parser = MyHTMLParser()
-parser.feed(htmlSource.content)
+def main():
+    args = getargs()
 
-#@TODO: check how parser handles <br>, <hr>
+    html_filepath = os.path.join(args.html_dir, args.html_filename)
 
-for data in parser.htmlData:
-    if data.has_key('tag'):
-        print "<%s" % (data['tag']),
+    # Get the html file:
+    parser = MyHTMLParser()
+    with open(html_filepath, 'r') as fh:
+        contents = fh.read()
+        parser.feed(contents)
 
-    if data.has_key('attrs'):
-        for attr in data['attrs']:
-            print " %s=\"%s\"" % (attr[0], attr[1]),
+    #@TODO: check how parser handles <br>, <hr>
 
-    if data.has_key('tag'):
-        print ">",
+    new_html_contents = []
 
-    if data.has_key('endTag'):
-        print "</%s>" % (data['endTag'])
+    for data in parser.htmlData:
+        if data.has_key('tag'):
+            new_html_contents.append("<%s" % (data['tag']))
 
+        if data.has_key('attrs'):
+            for attr in data['attrs']:
+                new_html_contents.append(" %s=\"%s\"" % (attr[0], attr[1]))
+
+        if data.has_key('tag'):
+            new_html_contents.append(">")
+
+        if data.has_key('endTag'):
+            if data['endTag'] == 'html':
+                new_html_contents.append("    <script src=\"main001.js\"></script>\n")
+
+            new_html_contents.append("</%s>" % (data['endTag']))
+
+        if data.has_key('data'):
+            new_html_contents.append(data['data'])
+
+    print ''.join(new_html_contents)
+
+    #@TODO: date/timestamp
+    with open(os.path.join(args.html_dir, 'main001.js'), 'w') as fh:
+        fh.write('\n'.join(parser.scriptUrls))
+
+if __name__ == '__main__':
+    main()
